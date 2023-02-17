@@ -1,0 +1,56 @@
+name: $SESSION
+version: "0.3.10"
+
+security:
+  attestation:
+    tolerate: [debug-mode,hyperthreading, outdated-tcb, insecure-configuration]
+    ignore_advisories: "*"
+
+images:
+  - name: envcas_image
+    injection_files:
+     - path: /etc/envcas/config.yaml
+       content: |
+          program:  /bin/bash
+          injection_files:
+            - from: /etc/envcas/injected_file1
+              to: /work/out1
+            - from: /etc/envcas/injected_file2
+              to: /work/out2
+     - path: /etc/envcas/injected_file1
+       content: |
+          Secret="$$SCONE::example_secret$$"
+     - path: /etc/envcas/injected_file2
+       content: |
+          Secret=$$SCONE::example2_secret$$
+
+services:
+   - name: envcas
+     image_name: envcas_image
+     mrenclaves: [$MRENCLAVE]
+     command: envcas -c 'cat /work/out1'
+     environment:
+        SCONE_MODE: hw
+        SCONE_LOG: ERROR
+     pwd: /
+   - name: with_otp
+     image_name: envcas_image
+     attestation:
+        mrenclave: "$MRENCLAVE"
+     one_time_password_shared_secret: $$SCONE::otp_secret$$
+     command: envcas -c 'cat /work/out1'
+     environment:
+        SCONE_MODE: hw
+        SCONE_LOG: ERROR
+     pwd: /
+
+secrets:
+  - name: example_secret
+    kind: ascii
+    size: 32
+  - name: example2_secret
+    kind: binary
+    size: 64
+  - name: otp_secret
+    kind: ascii
+    value: JJBFGV2ZGNCFARKIKBFTGUCYKBNFKVQK # replace this one

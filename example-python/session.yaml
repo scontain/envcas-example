@@ -1,0 +1,26 @@
+name: $SESSION
+version: "0.3.10"
+
+security:
+  attestation:
+    mode: none
+
+images:
+  - name: envcas_image
+    injection_files:
+     - path: /etc/envcas/config.yaml
+       content: |
+          program:  /usr/bin/python3.9
+
+services:
+   - name: envcas
+     image_name: envcas_image
+     command: envcas /etc/envcas/app.py abc def deadbeef
+     environment:
+        SCONE_MODE: hw
+        SCONE_LOG: ERROR
+        # get TRUSTED_ENV from CAS
+        TRUSTED_ENV: trusted_env
+        # get UNTRUSTED_ENV from the untrusted environment
+        \@\@UNTRUSTED_ENV: IGNORED_VALUE_BECAUSE_IT_GETS_FROM_OUTSIDE
+     pwd: /
